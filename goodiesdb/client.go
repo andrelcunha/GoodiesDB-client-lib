@@ -60,9 +60,8 @@ func (c *Client) Auth(password string) error {
 }
 
 // Set sends the SET command to the server
-func (c *Client) Set(key, value string) error {
-	_, err := c.sendCommand(fmt.Sprintf("SET %s %s", key, value))
-	return err
+func (c *Client) Set(key, value string) (string, error) {
+	return c.sendCommand(fmt.Sprintf("SET %s %s", key, value))
 }
 
 // Get sends the GET command to the server
