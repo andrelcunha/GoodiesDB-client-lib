@@ -1,42 +1,86 @@
 package goodiesdb
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"net"
+	"net/url"
+	"strings"
 )
 
 type Client struct {
-	Address string
+	Address  string
+	Password string
+	conn     net.Conn
+	reader   *bufio.Reader
 }
 
-func NewClient(address string) *Client {
-	return &Client{Address: address}
-}
-
-func (c *Client) Set(key, value string) error {
-	url := fmt.Sprintf("%s/set", c.Address)
-	data := fmt.Sprintf("key=%s&value=%s", key, value)
-	resp, err := http.Post(url, "application/x-www-form-urlencoded", bytes.NewBufferString(data))
+// NewClient creates a new Client with TCP connection
+func NewClientByUrl(urlStr string) (*Client, error) {
+	u, err := url.Parse(urlStr)
 	if err != nil {
-		return err
+		// handle error
 	}
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+	address := u.Host
+
+	password := u.User.String()
+
+	return NewClient(address, password)
+}
+
+// NewClient creates a new Client with TCP connection
+func NewClient(address, password string) (*Client, error) {
+
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &Client{
+		Address:  address,
+		Password: password,
+		conn:     conn,
+		reader:   bufio.NewReader(conn),
+	}
+
+	if password != "" {
+		err = client.Auth(password)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return client, nil
+}
+
+// Auth authenticates the client with the server
+func (c *Client) Auth(password string) error {
+	_, err := c.sendCommand(fmt.Sprintf("AUTH %s", password))
 	return err
 }
 
+// Set sends the SET command to the server
+func (c *Client) Set(key, value string) error {
+	_, err := c.sendCommand(fmt.Sprintf("SET %s %s", key, value))
+	return err
+}
+
+// Get sends the GET command to the server
 func (c *Client) Get(key string) (string, error) {
-	url := fmt.Sprintf("%s/get/%s", c.Address, key)
-	resp, err := http.Get(url)
+	return c.sendCommand(fmt.Sprintf("GET %s", key))
+}
+
+// sendCommand sends a command to the server and reads the response
+func (c *Client) sendCommand(cmd string) (string, error) {
+	_, err := fmt.Fprintln(c.conn, cmd)
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+
+	response, err := c.reader.ReadString('\n')
 	if err != nil {
 		return "", err
 	}
-	return string(body), nil
+
+	return strings.TrimSpace(response), nil
 }
