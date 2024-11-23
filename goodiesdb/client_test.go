@@ -52,8 +52,8 @@ func handleMockConnection(conn net.Conn) {
 
 // Test client connection
 func TestClientConnection(t *testing.T) {
-	// ln := startMockServer(t)
-	// defer ln.Close()
+	ln := startMockServer(t)
+	defer ln.Close()
 
 	_, err := NewClient("localhost:6379", "")
 	if err != nil {
@@ -63,8 +63,8 @@ func TestClientConnection(t *testing.T) {
 
 // Test client authentication
 func TestClientAuthentication(t *testing.T) {
-	// ln := startMockServer(t)
-	// defer ln.Close()
+	ln := startMockServer(t)
+	defer ln.Close()
 
 	client, err := NewClient("localhost:6379", "guest")
 	if err != nil {
@@ -79,24 +79,24 @@ func TestClientAuthentication(t *testing.T) {
 
 // Test SET command
 func TestClientSet(t *testing.T) {
-	// ln := startMockServer(t)
-	// defer ln.Close()
+	ln := startMockServer(t)
+	defer ln.Close()
 
 	client, err := NewClient("localhost:6379", "guest")
 	if err != nil {
 		t.Errorf("Failed to connect to server: %v", err)
 	}
 
-	err = client.Set("mykey", "myvalue")
-	if err != nil {
+	msg, err := client.Set("mykey", "myvalue")
+	if err != nil || msg != "OK" {
 		t.Errorf("Failed to set key-value: %v", err)
 	}
 }
 
 // Test GET command
 func TestClientGet(t *testing.T) {
-	//ln := startMockServer(t)
-	//defer ln.Close()
+	ln := startMockServer(t)
+	defer ln.Close()
 
 	client, err := NewClient("localhost:6379", "guest")
 	if err != nil {
